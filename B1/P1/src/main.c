@@ -62,6 +62,12 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority) {
 }
 #endif
 
+#define PORT_RGB GPIOD
+#define PIN_G GPIO_PIN_12
+#define PIN_B GPIO_PIN_11
+#define PIN_R GPIO_PIN_13
+
+
 /** @addtogroup STM32F4xx_HAL_Examples
   * @{
   */
@@ -69,6 +75,8 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority) {
 /** @addtogroup Templates
   * @{
   */
+
+
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -113,20 +121,20 @@ int main(void)
      */
 	
 	// DECLARACION DE LOS LEDS 
-	__HAL_RCC_GPIOB_CLK_ENABLE();
+	__HAL_RCC_GPIOD_CLK_ENABLE();
 
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 	
-	GPIO_InitStruct.Pin = GPIO_PIN_0;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+	GPIO_InitStruct.Pin = PIN_G;
+  HAL_GPIO_Init(PORT_RGB, &GPIO_InitStruct);
 
-  GPIO_InitStruct.Pin = GPIO_PIN_7;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = PIN_B;
+  HAL_GPIO_Init(PORT_RGB, &GPIO_InitStruct);
 	
-	GPIO_InitStruct.Pin = GPIO_PIN_14;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+	GPIO_InitStruct.Pin = PIN_R;
+  HAL_GPIO_Init(PORT_RGB, &GPIO_InitStruct);
 	
 	//INTERRUPCIONES
 	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn); 
@@ -165,19 +173,19 @@ int main(void)
 
     if (tiempo_ld1 >= tiempo_retardo)
     {
-        HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
+        HAL_GPIO_TogglePin(PORT_RGB, PIN_G);
         tiempo_ld1 = 0;
     }
 
     if (tiempo_ld2 >= tiempo_retardo * 2)
     {
-        HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
+        HAL_GPIO_TogglePin(PORT_RGB, PIN_B);
         tiempo_ld2 = 0;
     }
 
     if (tiempo_ld3 >= tiempo_retardo * 4)
     {
-        HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14);
+        HAL_GPIO_TogglePin(PORT_RGB, PIN_R);
         tiempo_ld3 = 0;
     }
   }

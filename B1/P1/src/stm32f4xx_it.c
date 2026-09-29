@@ -54,6 +54,14 @@
   * @param  None
   * @retval None
   */
+	
+	//INTERRUPCIÓN 
+	void EXTI15_10_IRQHandler(){
+		HAL_GPIO_EXTI_IRQHandler (GPIO_PIN_13);
+		//Llama al callBack 
+	}
+
+	
 void NMI_Handler(void)
 {
 }

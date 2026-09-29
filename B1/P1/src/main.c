@@ -78,6 +78,12 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority) {
 static void SystemClock_Config(void);
 static void Error_Handler(void);
 
+static GPIO_InitTypeDef GPIO_InitStruct;
+uint32_t tiempo_retardo = 500; //Es 1Hz
+uint32_t tiempo_ld1 = 0;
+uint32_t tiempo_ld2 = 0;
+uint32_t tiempo_ld3 = 0;
+
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -105,6 +111,37 @@ int main(void)
 
   /* Add your application code here
      */
+	
+	// DECLARACION DE LOS LEDS 
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+	
+	GPIO_InitStruct.Pin = GPIO_PIN_0;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = GPIO_PIN_7;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+	
+	GPIO_InitStruct.Pin = GPIO_PIN_14;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+	
+	//INTERRUPCIONES
+	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn); 
+	
+	//DECLARACION BOTON B1
+	__HAL_RCC_GPIOC_CLK_ENABLE();//SIEMPRE PARA CD COSA OJOOO
+	
+	GPIO_InitStruct.Pin = GPIO_PIN_13;
+	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+	
+	
+	//Lo ponemos en el main porque a partir de ahora sabrá que el botón va a generar una interrupción y 
+	//pasara al otro fichero en caso de que se de poder atenderla, es como activar el botón para que haga lo que queremos
 
 #ifdef RTE_CMSIS_RTOS2
   /* Initialize CMSIS-RTOS2 */
@@ -120,7 +157,42 @@ int main(void)
   /* Infinite loop */
   while (1)
   {
+		HAL_Delay(125);
+
+    tiempo_ld1 += 125;
+    tiempo_ld2 += 125;
+    tiempo_ld3 += 125;
+
+    if (tiempo_ld1 >= tiempo_retardo)
+    {
+        HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
+        tiempo_ld1 = 0;
+    }
+
+    if (tiempo_ld2 >= tiempo_retardo * 2)
+    {
+        HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
+        tiempo_ld2 = 0;
+    }
+
+    if (tiempo_ld3 >= tiempo_retardo * 4)
+    {
+        HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_14);
+        tiempo_ld3 = 0;
+    }
   }
+}
+
+//FUNCION DE CALLBACK que se ejecuta con la interrupción todo lo que esta dentro de la funcion
+
+void HAL_GPIO_EXTI_Callback (uint16_t GPIO_Pin){
+		if (GPIO_Pin == GPIO_PIN_13){ //Solo si pulsamos el B1 pasa esto, lo ponemos así porque si pasa otra cosa pues será otro pin
+			if ( tiempo_retardo != 125){ //4 Hz
+				tiempo_retardo = tiempo_retardo/2; //2 Hz
+			} else {
+				tiempo_retardo = 500; //1 Hz
+			}
+		} 
 }
 
 /**
@@ -165,6 +237,8 @@ static void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLN = 96; //Lo hemso calculado haciendo el camino inverso con el APB1 y td eso
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2; //Dividir entre dos
   RCC_OscInitStruct.PLL.PLLQ = 7;
+	
+	
   if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     /* Initialization Error */

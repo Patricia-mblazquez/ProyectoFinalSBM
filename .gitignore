@@ -51,3 +51,4 @@ tmp/
 
 # Quitar MD por el momento
 *.md
+*@*

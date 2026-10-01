@@ -125,8 +125,9 @@ int main(void)
 
 LED_Init();
 htim7.Instance = TIM7; //al poner TIM7 se añaden los demás campos
-htim7.Init.Prescaler = 47999; //48MHz/48000 = 1000Hz, prescaler
+htim7.Init.Prescaler = 47999; //84 MHz/48000 = 1750Hz, prescaler OJO SON 84 PORQUE EL  TIMER 7 ESTA EN EL PB1
 htim7.Init.Period = 499; //Resgistro de recarga, contador principal del timer que contará de  a 49
+//1750/500= 3.5 Hzque es la frecuencia, 0,29s 
 
 HAL_NVIC_EnableIRQ (TIM7_IRQn);//Enable the peripheral IRQ
 __HAL_RCC_TIM7_CLK_ENABLE(); //Enable the TIM7 peripheral 

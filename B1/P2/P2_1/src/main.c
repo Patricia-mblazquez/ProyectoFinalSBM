@@ -125,9 +125,12 @@ int main(void)
 
 LED_Init();
 htim7.Instance = TIM7; //al poner TIM7 se añaden los demás campos
-htim7.Init.Prescaler = 47999; //84 MHz/48000 = 1750Hz, prescaler OJO SON 84 PORQUE EL  TIMER 7 ESTA EN EL PB1
-htim7.Init.Period = 499; //Resgistro de recarga, contador principal del timer que contará de  a 49
-//1750/500= 3.5 Hzque es la frecuencia, 0,29s 
+htim7.Init.Prescaler = 41999; 
+//84 MHz/48000 = 1750Hz, prescaler OJO SON 84 PORQUE EL  TIMER 7 ESTA EN EL PB1
+//Lo divido el 84 MHz/42000 = 2000Hz * 0.6666666 = 13333 
+htim7.Init.Period = 2999; 
+//Resgistro de recarga, contador principal del timer que contará de  a 49
+//1750/500= 3.5 Hz que es la frecuencia, 0,29s 
 
 HAL_NVIC_EnableIRQ (TIM7_IRQn);//Enable the peripheral IRQ
 __HAL_RCC_TIM7_CLK_ENABLE(); //Enable the TIM7 peripheral 
@@ -146,10 +149,14 @@ HAL_TIM_Base_Start_IT(&htim7); //Inicio el timer, empieza la cuenta
 
 
 
-void HAL_TIM_PeriodElapsedCallBack (TIM_HandleTypeDef *htim) { //FUNCIÓN DE CALLBACK PARA CUANDO EL LED SE ENCIENDA
+void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim) { //FUNCIÓN DE CALLBACK PARA CUANDO EL LED SE ENCIENDA
 	if (htim->Instance == TIM7) //Se comprubea que el timer es el 7
 		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);  //Hacemos toogle con el led 
 } //Rutina de atención a la interrupción
+
+void TIM7_IRQHandler(void) {
+    HAL_TIM_IRQHandler(&htim7); // Esto limpia los flags y llama al Callback de la HAL
+}
 
 void LED_Init(void) { //Inicializa el LED
 	__HAL_RCC_GPIOB_CLK_ENABLE();

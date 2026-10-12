@@ -78,8 +78,13 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority) {
 static void SystemClock_Config(void);
 static void Error_Handler(void);
 
+
 static void initPIN_OUTPUT (void);
 static void initTimer (void);
+static void initBoton1(void);
+
+static GPIO_InitTypeDef GPIO_InitStruct;
+static int32_t p = 41999;
 
 TIM_HandleTypeDef tim2;
 
@@ -113,8 +118,11 @@ int main(void)
   /* Add your application code here
      */
 	
+	//INICIAMOS TODAS LAS COSAS
 	initPIN_OUTPUT();
 	initTimer();
+	initBoton1();
+	
 
 #ifdef RTE_CMSIS_RTOS2
   /* Initialize CMSIS-RTOS2 */
@@ -131,6 +139,34 @@ int main(void)
   while (1)
   {
   }
+}
+
+
+
+//DECLARACION BOTON B1		
+static void initBoton1 (void) {
+		__HAL_RCC_GPIOC_CLK_ENABLE();//SIEMPRE PARA CD COSA OJOOO
+	
+	GPIO_InitStruct.Pin = GPIO_PIN_13;
+	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+	
+    HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);         // Habilitar la interrupción
+}
+
+
+//FUNCION DE CALLBACK que se ejecuta con la interrupci?n todo lo que esta dentro de la funcion
+void HAL_GPIO_EXTI_Callback (uint16_t GPIO_Pin){
+		if (GPIO_Pin == GPIO_PIN_13){ 
+			if ( p == 41999) {
+				p = 16799; //2500Hz que son 0.4ms que para el tooggle son 0.2ms, entonces los 5kHz, --> 84 MHz / p = freq (5k)  esto hace que p =
+			} else {
+				p = 41999;
+			}
+			tim2.Init.Period = p;
+			HAL_TIM_OC_Init(&tim2); //inicia el timer de nuevo hasta cambiarlo otra vez
+		} 
 }
 
 
@@ -161,7 +197,8 @@ static void initTimer(void){
 
     tim2.Instance = TIM2;
     tim2.Init.Prescaler   = 0; // no prescaler (TIM2 clk 84 MHz)
-    tim2.Init.Period = 20999;  // para una freq. de 2 KHz hay que hacer toggle cada 250 us --> p = 21000 ciclos
+		tim2.Init.Period = p; //Inicializado a 41999 al inicio y sera la variable que vayamos cambiando
+	//APARTADO A) tim2.Init.Period = 41999;  // para una freq. de 1 KHz hay que hacer toggle cada 1 ms/2 = 0.5 ms que son 2 kHz --> 84 MHz / p = freq (2k)  esto hace que p = 
     HAL_TIM_OC_Init(&tim2); // modo de comparacion con salida
 
     /* Finally initialize Timer-2, for Output  */
@@ -171,8 +208,9 @@ static void initTimer(void){
     TIM_Channel_InitStruct.OCFastMode   =   TIM_OCFAST_DISABLE;
     HAL_TIM_OC_ConfigChannel(&tim2, &TIM_Channel_InitStruct, TIM_CHANNEL_4);
 
-    HAL_TIM_OC_Start(&tim2, TIM_CHANNEL_4); // del timer 2 uso el canal 4 para comparar la salida
+    HAL_TIM_OC_Start(&tim2, TIM_CHANNEL_4); //Arranca el timer 2 uso el canal 4 para comparar la salida
 }
+
 
 /**
   * @brief  System Clock Configuration
@@ -212,8 +250,8 @@ static void SystemClock_Config(void)
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 25;
-  RCC_OscInitStruct.PLL.PLLN = 336;
+  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLN = 168;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 7;
   if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)

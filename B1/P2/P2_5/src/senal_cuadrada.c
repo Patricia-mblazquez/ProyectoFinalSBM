@@ -3,8 +3,10 @@
 // Variables globales 
 
 static TIM_HandleTypeDef tim2;
-static uint32_t p = 41999; 
-static uint32_t pulso = 10500; // 25% de 42000 (42000 * 0.25 = 10500)
+static uint32_t p = 41999;  //84M (frecuencia del timer) / 2000 (la frecuencia que te piden)
+static uint32_t pulso = 8400; // Para saber cuanto tiempo tiene que estar activo multiplicamos 4200*porcentaje
+//Ponemos 8400 porque es el 20% de 42000 entonces como vamos incrementando de 20% en 20% solo tendremos que sumar a la varible pulso 
+static TIM_OC_InitTypeDef TIM_Channel_InitStruct = {0};
 
 // Llamada de las funciones internas
 static void initPIN_OUTPUT(void);
@@ -16,6 +18,22 @@ void SenalCuadrada_Init(void) {
     initPIN_OUTPUT();
     initTimer();
     initBoton1();
+}
+
+// CallBack para el boton: sube el ciclo de trabajo de 20% en 20% hasta el 80%
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+    if (GPIO_Pin == GPIO_PIN_13) { 
+        if (pulso < 33600) {      // 33600 es el 80% si no ha lleh¡gado a eso lo sumamos
+            pulso = pulso + 8400; 
+        } else {
+            pulso = 8400;         // Vuelve al 20% 
+        }
+        
+        // Actualizamos el nuevo pulso en el canal y reiniciamos el PWM
+        TIM_Channel_InitStruct.Pulse = pulso;
+        HAL_TIM_PWM_ConfigChannel(&tim2, &TIM_Channel_InitStruct, TIM_CHANNEL_4);
+        HAL_TIM_PWM_Start(&tim2, TIM_CHANNEL_4);
+    } 
 }
 
 //Declaracion de las funciones bitin, pin, timer
@@ -47,7 +65,7 @@ static void initPIN_OUTPUT(void) { // Este fabrica la onda para el boton con el 
 }
 
 static void initTimer(void) { //Cambiamos el modo de OC por el de PWM 
-    TIM_OC_InitTypeDef TIM_Channel_InitStruct = {0};
+   
     
     // Enable clock to timer-2
     __HAL_RCC_TIM2_CLK_ENABLE();

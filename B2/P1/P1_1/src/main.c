@@ -41,6 +41,8 @@
 #include "main.h"
 
 #include "Thled1.h"
+#include "Thled2.h"
+#include "Thled3.h"
 
 #ifdef _RTE_
 #include "RTE_Components.h"             // Component selection
@@ -115,7 +117,8 @@ int main(void)
 
   /* Add your application code here
      */
-	Init_Thread();
+	
+	
 	
 	
 
@@ -125,6 +128,10 @@ int main(void)
 
   /* Create thread functions that start executing, 
   Example: osThreadNew(app_main, NULL, NULL); */
+
+	Init_Thread1();
+	Init_Thread2();
+	Init_Thread3();
 
   /* Start thread execution */
   osKernelStart();

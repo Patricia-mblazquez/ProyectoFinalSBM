@@ -1,5 +1,7 @@
 #include "cmsis_os2.h"                          // CMSIS RTOS header file
 #include "stm32f4xx_hal.h"
+#include "Thled2.h"
+
  
 /*----------------------------------------------------------------------------
  *      Thread 1 'Thread_Name': Sample thread
@@ -7,9 +9,12 @@
  
 osThreadId_t tid_Thread1;                        // thread id
  
+ 
 void Thread1 (void *argument);                   // thread function
 
 static GPIO_InitTypeDef GPIO_InitStruct;
+static int cont = 0;
+static int primera_vez = 1;
 void ledInit1 (void);
  
 int Init_Thread1 (void) { //Creacion del thread
@@ -29,9 +34,19 @@ void Thread1 (void *argument) {
   while (1) {
 		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 		osDelay (200); //Cambio y hago que se encineda durante 200
+		
 		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 		osDelay (800); //Cambio con el toogle y hago que se enciemda durante 800ms
-
+		
+    if (primera_vez == 1) { // Solo cuenta las 5 primeras veces
+        cont++;
+        if (cont == 5) {
+            osThreadFlagsSet(tid_Thread2, 0x0001U); // Avisa al LED2
+            primera_vez = 0; // Se desactiva para siempre, porque una vez que ha arrancado no se tiene que volver a encender mas
+        }
+		}
+		
+		
   ; // Insert thread code here...
     osThreadYield();                            // suspend thread
   }

@@ -395,14 +395,24 @@
               <FilePath>..\src\stm32f4xx_it.c</FilePath>
             </File>
             <File>
-              <FileName>Thread.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\src\Thread.c</FilePath>
-            </File>
-            <File>
               <FileName>Thled1.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\src\Thled1.h</FilePath>
+            </File>
+            <File>
+              <FileName>Thled1.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\Thled1.c</FilePath>
+            </File>
+            <File>
+              <FileName>Thled2.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\Thled2.c</FilePath>
+            </File>
+            <File>
+              <FileName>Thled3.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\Thled3.c</FilePath>
             </File>
           </Files>
         </Group>

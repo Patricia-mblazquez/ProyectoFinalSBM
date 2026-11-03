@@ -26,6 +26,7 @@ void th_LCD (void *argument);                       // thread function LCD
 void th_LCD_test (void *argument);                  // thread function test
 
 void LCD_Reset (void);
+void LCD_Init (void);
 
 static void cb_spi(uint32_t event);
 
@@ -62,6 +63,7 @@ void th_LCD (void *argument) {
 
 // Llamadas a las funciones de inicialización (del hardware, no del hilo)
 	LCD_Reset ();
+	LCD_Init ();
 while (1) {
 
 // Esperar un flag desde el thread de test
@@ -129,7 +131,7 @@ void LCD_wr_data ( unsigned char data )
     // Seleccionar CS = 0;
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
     // Seleccionar A0 = 1;
-	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET);
     // Escribir un dato ( data ) usando la función SPIDrv -> Send ();
 	SPIdrv->Send(&data, 1);
     // Esperar al flag enviado desde la cb_spi () de transferencia finalizada;
@@ -145,7 +147,7 @@ void LCD_wr_cmd ( unsigned char cmd )
     // Seleccionar CS = 0;
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
     // Seleccionar A0 = 0;
-	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_RESET);
     // Escribir un comando (cmd) usando la función SPIDrv -> Send ();
 	SPIdrv->Send(&cmd, 1);
     // Esperar al flag enviado desde la cb_spi () de transferencia finalizada;
@@ -153,6 +155,22 @@ void LCD_wr_cmd ( unsigned char cmd )
     // Seleccionar CS = 1;
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
 }	
+
+
+void LCD_Init(){
+    LCD_wr_cmd(0xAE);
+    LCD_wr_cmd(0xA2);
+    LCD_wr_cmd(0xA0);
+    LCD_wr_cmd(0xC8);
+    LCD_wr_cmd(0x22);
+    LCD_wr_cmd(0x2F);
+    LCD_wr_cmd(0x40);
+    LCD_wr_cmd(0xAF);
+    LCD_wr_cmd(0x81);
+    LCD_wr_cmd(0x3F); // ajustamos el contraste de la pantalla con un valor de 3F
+    LCD_wr_cmd(0xA4);
+    LCD_wr_cmd(0xA6);
+}
 
 //Pines de GPIO 
 

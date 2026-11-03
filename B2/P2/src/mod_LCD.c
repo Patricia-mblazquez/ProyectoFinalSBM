@@ -124,6 +124,36 @@ static void cb_spi(uint32_t event)
 }
 	}
 
+void LCD_wr_data ( unsigned char data )
+{
+    // Seleccionar CS = 0;
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
+    // Seleccionar A0 = 1;
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET);
+    // Escribir un dato ( data ) usando la función SPIDrv -> Send ();
+	SPIdrv->Send(&data, 1);
+    // Esperar al flag enviado desde la cb_spi () de transferencia finalizada;
+	osThreadFlagsWait(0x02, osFlagsWaitAny, osWaitForever);
+    // Seleccionar CS = 1;
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
+}
+
+// LCD_wr_cmd : Función que escribe un comando en el LCD.
+
+void LCD_wr_cmd ( unsigned char cmd )
+{
+    // Seleccionar CS = 0;
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
+    // Seleccionar A0 = 0;
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET);
+    // Escribir un comando (cmd) usando la función SPIDrv -> Send ();
+	SPIdrv->Send(&cmd, 1);
+    // Esperar al flag enviado desde la cb_spi () de transferencia finalizada;
+	osThreadFlagsWait(0x02, osFlagsWaitAny, osWaitForever);
+    // Seleccionar CS = 1;
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
+}	
+
 //Pines de GPIO 
 
 static void Pin_A0() //a 0 instrucción, a 1 dato.

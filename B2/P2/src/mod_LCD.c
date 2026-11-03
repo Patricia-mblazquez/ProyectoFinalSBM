@@ -1,6 +1,8 @@
 /* ** Fichero mod_LCD .c ** */
 #include "cmsis_os2.h"                          // CMSIS RTOS header file
 #include "mod_LCD.h"
+#include "Driver_SPI.h"
+#include "stm32f4xx_hal.h"
 
 // Creelo , seañadirá aquí todo el có digo que maneja el LCD
 
@@ -10,9 +12,28 @@
 
 osThreadId_t tid_Thread_LCD;                        // thread id de LCD
 osThreadId_t tid_Thread_LCD_test;                   // thread id de test
+
+uint32_t spi_errors = 0;
+
+static GPIO_InitTypeDef GPIO_InitStruct;
  
+extern ARM_DRIVER_SPI Driver_SPI1;
+ARM_DRIVER_SPI* SPIdrv = &Driver_SPI1;
+
+//static int flag = 0; 
+
 void th_LCD (void *argument);                       // thread function LCD
 void th_LCD_test (void *argument);                  // thread function test
+
+void LCD_Reset (void);
+
+static void cb_spi(uint32_t event);
+
+//static void cb_spi(void);
+
+static void Pin_A0(void);
+static void Pin_Reset(void);
+static void Pin_CS(void);
 
 // Inicialización del hilo de gestión
 int Init_Thread_LCD (void) {
@@ -40,7 +61,7 @@ int Init_Thread_LCD_test (void) {
 void th_LCD (void *argument) {
 
 // Llamadas a las funciones de inicialización (del hardware, no del hilo)
-
+	LCD_Reset ();
 while (1) {
 
 // Esperar un flag desde el thread de test
@@ -68,3 +89,77 @@ while (1) {
 }
 
 }
+
+//Configuracion de la interfaz SPI
+void LCD_Reset (void) {
+	//Inicializacion y configuracion del driver SPI para gestionar el LCD
+	SPIdrv -> Initialize(cb_spi); //Esto llama al callBack
+	SPIdrv -> PowerControl(ARM_POWER_FULL);
+	SPIdrv -> Control(ARM_SPI_MODE_MASTER | ARM_SPI_CPOL1_CPHA1 | ARM_SPI_MSB_LSB | ARM_SPI_DATA_BITS(8), 1000000); //CAMBIADO
+	SPIdrv -> Control(ARM_SPI_CONTROL_SS, ARM_SPI_SS_INACTIVE);
+	
+	//Configura los pines IO que sean necesarios
+	Pin_A0();
+	Pin_Reset(); 
+	Pin_CS();    
+	
+	//Generear la señal de reset	
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET);
+	HAL_Delay(10);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);
+	HAL_Delay(1);
+}
+
+//CallBack
+static void cb_spi(uint32_t event)
+{
+	if (event & ARM_SPI_EVENT_TRANSFER_COMPLETE){
+		osThreadFlagsSet (tid_Thread_LCD, 0x02);
+	}
+	if (event & ARM_SPI_EVENT_DATA_LOST) {
+		spi_errors++; //perdida de datos
+	}
+	if (event & ARM_SPI_EVENT_MODE_FAULT) {
+		spi_errors++; //Conflicto bus
+}
+	}
+
+//Pines de GPIO 
+
+static void Pin_A0() //a 0 instrucción, a 1 dato.
+{
+  __HAL_RCC_GPIOF_CLK_ENABLE();
+
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET);
+  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+}
+
+static void Pin_Reset() 
+{
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+
+  GPIO_InitStruct.Pin = GPIO_PIN_6;
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET); //Set es porque empieza en nivel alto sino podriamos get
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+}
+
+static void Pin_CS() 
+{
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+
+  GPIO_InitStruct.Pin = GPIO_PIN_14;
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET); //Set es porque empieza en nivel alto sino podriamos get
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+}
+
+

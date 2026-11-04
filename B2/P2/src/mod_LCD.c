@@ -14,27 +14,35 @@ osThreadId_t tid_Thread_LCD;                        // thread id de LCD
 osThreadId_t tid_Thread_LCD_test;                   // thread id de test
 
 uint32_t spi_errors = 0;
+static unsigned char buffer[512]; 
 
 static GPIO_InitTypeDef GPIO_InitStruct;
  
 extern ARM_DRIVER_SPI Driver_SPI1;
 ARM_DRIVER_SPI* SPIdrv = &Driver_SPI1;
 
-//static int flag = 0; 
-
+//Funcion hilos LCD
 void th_LCD (void *argument);                       // thread function LCD
 void th_LCD_test (void *argument);                  // thread function test
 
+//Funciones del LCD 
 void LCD_Reset (void);
 void LCD_Init (void);
+void LCD_update(void);
 
-static void cb_spi(uint32_t event);
-
-//static void cb_spi(void);
-
+//Funciones de los pines 
 static void Pin_A0(void);
 static void Pin_Reset(void);
 static void Pin_CS(void);
+
+//Funcion de callback
+static void cb_spi(uint32_t event);
+
+//Funciones LCD
+void cuadradroArribaIzquierda (void);
+void letraAIzquierda (void);
+void letraABajoIzquierda (void); 
+void barraCreciente (void);
 
 // Inicialización del hilo de gestión
 int Init_Thread_LCD (void) {
@@ -58,24 +66,29 @@ int Init_Thread_LCD_test (void) {
   return(0);
 }
 
+
 // Thread de gestión
 void th_LCD (void *argument) {
 
-// Llamadas a las funciones de inicialización (del hardware, no del hilo)
-	LCD_Reset ();
-	LCD_Init ();
-while (1) {
+    // Llamadas a las funciones de inicialización 
+    LCD_Reset();
+    LCD_Init();   
+    LCD_update(); // Limpia la pantalla al arrancar
 
-// Esperar un flag desde el thread de test
-	osThreadFlagsWait(0x001, osFlagsWaitAny, osWaitForever);
-// Representar en el LCD la información
-
-}
-
+    while (1) {
+       // El hilo se queda bloqueado aquí durmiendo hasta que th_LCD_test manda el flag 0x001
+       osThreadFlagsWait(0x001, osFlagsWaitAny, osWaitForever);
+        
+      //cuadradroArribaIzquierda ();
+//      letraAIzquierda ();
+//			letraABajoIzquierda (); 
+			barraCreciente (); 
+    }
 }
 
 // Thread de test
-void th_LCD_test (void *argument) {
+void th_LCD_test (void *argument) 
+{
 
 // Su función es probar th_LCD
 
@@ -93,7 +106,8 @@ while (1) {
 }
 
 //Configuracion de la interfaz SPI
-void LCD_Reset (void) {
+void LCD_Reset (void) 
+{
 	//Inicializacion y configuracion del driver SPI para gestionar el LCD
 	SPIdrv -> Initialize(cb_spi); //Esto llama al callBack
 	SPIdrv -> PowerControl(ARM_POWER_FULL);
@@ -107,9 +121,9 @@ void LCD_Reset (void) {
 	
 	//Generear la señal de reset	
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET);
-	HAL_Delay(10);
+	osDelay(10);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);
-	HAL_Delay(1);
+	osDelay(1);
 }
 
 //CallBack
@@ -133,7 +147,7 @@ void LCD_wr_data ( unsigned char data )
     // Seleccionar A0 = 1;
 	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_SET);
     // Escribir un dato ( data ) usando la función SPIDrv -> Send ();
-	SPIdrv->Send(&data, 1);
+	SPIdrv->Send(&data, sizeof(data));
     // Esperar al flag enviado desde la cb_spi () de transferencia finalizada;
 	osThreadFlagsWait(0x02, osFlagsWaitAny, osWaitForever);
     // Seleccionar CS = 1;
@@ -149,7 +163,7 @@ void LCD_wr_cmd ( unsigned char cmd )
     // Seleccionar A0 = 0;
 	HAL_GPIO_WritePin(GPIOF, GPIO_PIN_13, GPIO_PIN_RESET);
     // Escribir un comando (cmd) usando la función SPIDrv -> Send ();
-	SPIdrv->Send(&cmd, 1);
+	SPIdrv->Send(&cmd, sizeof(cmd));
     // Esperar al flag enviado desde la cb_spi () de transferencia finalizada;
 	osThreadFlagsWait(0x02, osFlagsWaitAny, osWaitForever);
     // Seleccionar CS = 1;
@@ -167,9 +181,90 @@ void LCD_Init(){
     LCD_wr_cmd(0x40);
     LCD_wr_cmd(0xAF);
     LCD_wr_cmd(0x81);
-    LCD_wr_cmd(0x3F); // ajustamos el contraste de la pantalla con un valor de 3F
+    LCD_wr_cmd(0x0F); // ajustamos el contraste de la pantalla con un valor de 3F
     LCD_wr_cmd(0xA4);
     LCD_wr_cmd(0xA6);
+}
+
+void LCD_update(void)
+{
+    int i;
+    
+    LCD_wr_cmd(0x00); // 4 bits de la parte baja de la dirección a 0
+    LCD_wr_cmd(0x10); // 4 bits de la parte alta de la dirección a 0
+    LCD_wr_cmd(0xB0); // Página 0
+    for (i = 0; i < 128; i++) {
+        LCD_wr_data(buffer[i]);
+    }
+    
+    LCD_wr_cmd(0x00); // 4 bits de la parte baja de la dirección a 0
+    LCD_wr_cmd(0x10); // 4 bits de la parte alta de la dirección a 0
+    LCD_wr_cmd(0xB1); // Página 1
+    for (i = 128; i < 256; i++) {
+        LCD_wr_data(buffer[i]);
+    }
+    
+    LCD_wr_cmd(0x00);
+    LCD_wr_cmd(0x10);
+    LCD_wr_cmd(0xB2); // Página 2
+    for (i = 256; i < 384; i++) {
+        LCD_wr_data(buffer[i]);
+    }
+    
+    LCD_wr_cmd(0x00);
+    LCD_wr_cmd(0x10);
+    LCD_wr_cmd(0xB3); // Página 3
+    for (i = 384; i < 512; i++) {
+        LCD_wr_data(buffer[i]);
+    }
+}
+
+void cuadradroArribaIzquierda (void) 
+{
+// Recorre los primeros 8 bytes del buffer (esquina superior izquierda).
+// Pone 0xFF (11111111 en binario), lo que enciende los 8 píxeles verticales de cada columna.
+	for(int a = 0; a < 8; a++) {
+		buffer[a] = 0xFF; 
+  }
+	for(int p = 8; p < 512; p++) {
+    buffer[p] = 0x00; 
+  }
+  LCD_update(); // Manda los datos físicos a la pantalla
+}
+
+void letraAIzquierda (void) 
+{
+	unsigned char letra_A[8] = {0x7C, 0x12, 0x11, 0x12, 0x7C, 0x00, 0x00, 0x00};
+	for(int i = 0; i < 8; i++) {
+		buffer[i] = letra_A[i]; 
+   }
+   LCD_update(); 
+}
+
+void letraABajoIzquierda (void) 
+{
+// Sumamos 384 a la 'i'. Como cada página tiene 128 columnas (128x3=384), 
+// el índice 384 es exactamente el primer byte de la última página (abajo del todo).
+	unsigned char letra_A[8] = {0x7C, 0x12, 0x11, 0x12, 0x7C, 0x00, 0x00, 0x00};
+	for(int i = 0; i < 8; i++) {
+		buffer[384 + i] = letra_A[i]; 
+   }
+   LCD_update(); 
+}
+
+void barraCreciente (void) 
+{
+// Comprueba que no nos salgamos del ancho de la pantalla (128).
+	static int ancho_barra = 0; 
+	if (ancho_barra < 128) { 
+		buffer[ancho_barra]       = 0xFF; // Pinta 8 píxeles en la Pág 0 (arriba)
+		buffer[ancho_barra + 128] = 0xFF; // Pinta 8 píxeles en la Pág 1
+		buffer[ancho_barra + 256] = 0xFF; // Pinta 8 píxeles en la Pág 2
+		buffer[ancho_barra + 384] = 0xFF; // Pinta 8 píxeles en la Pág 3 (abajo)
+            
+		ancho_barra++; // Suma 1. Al siguiente segundo, pintará la columna de al lado.
+   }
+	LCD_update();
 }
 
 //Pines de GPIO 

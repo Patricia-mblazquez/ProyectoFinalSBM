@@ -14,6 +14,7 @@ osThreadId_t tid_Thread_LCD_test;                   // thread id de test
 
 uint32_t spi_errors = 0;
 static unsigned char buffer[512]; 
+static uint16_t positionL1 = 0;
 
 static GPIO_InitTypeDef GPIO_InitStruct;
  
@@ -43,6 +44,7 @@ void letraAIzquierda (void);
 void letraABajoIzquierda (void); 
 void barraCreciente (void);
 void LCD_symbolToLocalBuffer_L1(uint8_t symbol);
+void Escribe_L1(uint8_t *cadena);
 
 // Inicialización del hilo de gestión
 int Init_Thread_LCD (void) {
@@ -77,14 +79,14 @@ void th_LCD (void *argument) {
 
     while (1) {
        // El hilo se queda bloqueado aquí durmiendo hasta que th_LCD_test manda el flag 0x001
-       osThreadFlagsWait(0x001, osFlagsWaitAny, osWaitForever);
+			osThreadFlagsWait(0x001, osFlagsWaitAny, osWaitForever);
         
       //cuadradroArribaIzquierda ();
-//      letraAIzquierda ();
-//			letraABajoIzquierda (); 
+      //letraAIzquierda ();
+  		//letraABajoIzquierda (); 
 			//barraCreciente (); 
-      LCD_symbolToLocalBuffer_L1('H');
-			
+      Escribe_L1((uint8_t *)"Practica 3 LCD");
+			LCD_update();
        
     }
 }
@@ -263,8 +265,6 @@ void barraCreciente (void)
 
 void LCD_symbolToLocalBuffer_L1(uint8_t symbol) 
 {
-    //Con 'static', la función recuerda por dónde se quedó en la última llamada
-    static uint16_t positionL1 = 0; 
     uint8_t i, value1, value2;
     uint16_t offset = 0;
     uint8_t char_width = 0;
@@ -290,8 +290,28 @@ void LCD_symbolToLocalBuffer_L1(uint8_t symbol)
     }
     
 		positionL1 = positionL1 + char_width; 
-		LCD_update();
+	
 }
+
+void Escribe_L1 ( uint8_t * cadena ) 
+{
+	// Se recorre la cadena y se invoca a la funcion LCD_symbolToLocalBuffer_L1
+	// con cada uno de los caracteres
+    positionL1 = 0;
+    
+    // 2. Limpiar todo el tercio superior de la pantalla (Páginas 0 y 1)
+    for(int j = 0; j < 256; j++) {
+        buffer[j] = 0x00;
+    }
+    
+    // 3. Recorrer la cadena de texto hasta llegar al final (\0)
+    while (*cadena != '\0') {
+        LCD_symbolToLocalBuffer_L1(*cadena);
+        cadena++; // Avanza a la siguiente letra de la frase
+    }
+}
+
+
 
 //Pines de GPIO 
 

@@ -101,24 +101,46 @@ void th_LCD (void *argument) {
 void th_LCD_test (void *argument) {
   (void)argument;
   MSGQUEUE_LCD_t msg_tx;
-  uint32_t contador = 0;
-	
+  
+  uint32_t valor1 = 1234;
+  float valor2 = 3.14159f;
+    
   while (1) {
-      osDelay(1000);
+      osDelay(1000); 
       
-      sprintf((char *)msg_tx.Buf, "Mensaje L1: %d", contador);
+      sprintf((char *)msg_tx.Buf, "Prueba valor1: %u", valor1);
       msg_tx.linea = 1;
       osMessageQueuePut(mid_LCD, &msg_tx, 0U, 0U);
       
-      osDelay(1000);
+      osDelay(10); // Un pequeñísimo respiro de seguridad entre mensajes
       
-      sprintf((char *)msg_tx.Buf, "Mensaje L2: %d", contador);
+      sprintf((char *)msg_tx.Buf, "Prueba valor2: %.5f", valor2);
       msg_tx.linea = 2;
-      osMessageQueuePut(mid_LCD, &msg_tx, 0U, 0U);
-      
-      contador++; // Aumenta el número para que el texto cambie
+      osMessageQueuePut(mid_LCD, &msg_tx, 0U, 0U); 
   }
 }
+
+//void th_LCD_test (void *argument) {
+//  (void)argument;
+//  MSGQUEUE_LCD_t msg_tx;
+//  uint32_t contador = 0;
+//	
+//  while (1) {
+//      osDelay(1000);
+//      
+//      sprintf((char *)msg_tx.Buf, "Mensaje L1: %d", contador);
+//      msg_tx.linea = 1;
+//      osMessageQueuePut(mid_LCD, &msg_tx, 0U, 0U);
+//      
+//      osDelay(1000);
+//      
+//      sprintf((char *)msg_tx.Buf, "Mensaje L2: %d", contador);
+//      msg_tx.linea = 2;
+//      osMessageQueuePut(mid_LCD, &msg_tx, 0U, 0U);
+//      
+//      contador++; // Aumenta el número para que el texto cambie
+//  }
+//}
 
 //Configuracion de la interfaz SPI
 void LCD_Reset (void) 

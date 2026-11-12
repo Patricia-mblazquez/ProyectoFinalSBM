@@ -4,13 +4,11 @@
 #include "Driver_SPI.h"
 #include "stm32f4xx_hal.h"
 #include "Arial12x12.h"
-
-// Creelo , se añadirá aquí todo el código que maneja el LCD
-// Debe contener dos threads , uno de gestión y otro de test
-// También se irán añadiendo las funciones de inicialización del LCD
+#include <stdio.h> // Lo necesitamos para usar el printf
 
 osThreadId_t tid_Thread_LCD;                        // thread id de LCD
 osThreadId_t tid_Thread_LCD_test;                   // thread id de test
+osMessageQueueId_t mid_LCD;
 
 uint32_t spi_errors = 0;
 static unsigned char buffer[512]; 
@@ -51,7 +49,11 @@ void Escribe_L2(uint8_t *cadena);
 
 // Inicialización del hilo de gestión
 int Init_Thread_LCD (void) {
- 
+	mid_LCD = osMessageQueueNew(16, sizeof(MSGQUEUE_LCD_t), NULL); //Creamos la cola de los mensajes
+  if (mid_LCD == NULL) {
+    return(-1);
+  }
+	
   tid_Thread_LCD = osThreadNew(th_LCD, NULL, NULL);
   if (tid_Thread_LCD == NULL) {
     return(-1);
@@ -74,36 +76,47 @@ int Init_Thread_LCD_test (void) {
 
 // Thread de gestión
 void th_LCD (void *argument) {
+    
+    MSGQUEUE_LCD_t msg_rx; // Variable local para recibir el mensaje
 
-    // Llamadas a las funciones de inicialización 
     LCD_Reset();
     LCD_Init();   
-    LCD_update(); // Limpia la pantalla al arrancar
+    LCD_update(); 
 
     while (1) {
-       // El hilo se queda bloqueado aquí durmiendo hasta que th_LCD_test manda el flag 0x001
-			osThreadFlagsWait(0x001, osFlagsWaitAny, osWaitForever);
+       osMessageQueueGet(mid_LCD, &msg_rx, NULL, osWaitForever);
         
-      //cuadradroArribaIzquierda ();
-      //letraAIzquierda ();
-  		//letraABajoIzquierda (); 
-			//barraCreciente (); 
-      Escribe_L1((uint8_t *)"Practica 3 LCD");
-			Escribe_L2((uint8_t *)"Que bien funciona");
-			LCD_update();
+       // Analiza el contenido del mensaje
+       if (msg_rx.linea == 1) {
+           Escribe_L1(msg_rx.Buf);
+       } 
+       else if (msg_rx.linea == 2) {
+           Escribe_L2(msg_rx.Buf);
+       }
        
+       LCD_update(); 
     }
 }
 
 void th_LCD_test (void *argument) {
- (void)argument;
+  (void)argument;
+  MSGQUEUE_LCD_t msg_tx;
+  uint32_t contador = 0;
 	
   while (1) {
-		// Esperar 1 segundo
-		osDelay(1000);
-		
-		// Enviar una señal a th_LCD para representar información en el LCD
-		osThreadFlagsSet(tid_Thread_LCD, 0x01);
+      osDelay(1000);
+      
+      sprintf((char *)msg_tx.Buf, "Mensaje L1: %d", contador);
+      msg_tx.linea = 1;
+      osMessageQueuePut(mid_LCD, &msg_tx, 0U, 0U);
+      
+      osDelay(1000);
+      
+      sprintf((char *)msg_tx.Buf, "Mensaje L2: %d", contador);
+      msg_tx.linea = 2;
+      osMessageQueuePut(mid_LCD, &msg_tx, 0U, 0U);
+      
+      contador++; // Aumenta el número para que el texto cambie
   }
 }
 
@@ -331,7 +344,7 @@ void LCD_symbolToLocalBuffer_L2(uint8_t symbol)
             buffer[j] = 0x00;
         }
     }
-    
+		
     for (i = 0; i < 12; i++) {
         if ((positionL2 + i) < 128) {
             value1 = Arial12x12[offset + i * 2 + 1];

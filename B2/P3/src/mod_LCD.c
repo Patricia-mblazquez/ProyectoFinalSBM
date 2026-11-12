@@ -15,6 +15,7 @@ osThreadId_t tid_Thread_LCD_test;                   // thread id de test
 uint32_t spi_errors = 0;
 static unsigned char buffer[512]; 
 static uint16_t positionL1 = 0;
+static uint16_t positionL2 = 0;
 
 static GPIO_InitTypeDef GPIO_InitStruct;
  
@@ -45,6 +46,8 @@ void letraABajoIzquierda (void);
 void barraCreciente (void);
 void LCD_symbolToLocalBuffer_L1(uint8_t symbol);
 void Escribe_L1(uint8_t *cadena);
+void LCD_symbolToLocalBuffer_L2(uint8_t symbol); 
+void Escribe_L2(uint8_t *cadena);
 
 // Inicialización del hilo de gestión
 int Init_Thread_LCD (void) {
@@ -86,6 +89,7 @@ void th_LCD (void *argument) {
   		//letraABajoIzquierda (); 
 			//barraCreciente (); 
       Escribe_L1((uint8_t *)"Practica 3 LCD");
+			Escribe_L2((uint8_t *)"Que bien funciona");
 			LCD_update();
        
     }
@@ -281,12 +285,13 @@ void LCD_symbolToLocalBuffer_L1(uint8_t symbol)
     }
     
     //Dibujamos el carácter
-    for (i = 0; i < 12; i++) {
-            value1 = Arial12x12[offset + i * 2 + 1];
-            value2 = Arial12x12[offset + i * 2 + 2];
-            
-            buffer[i + positionL1] = value1;
-            buffer[i + 128 + positionL1] = value2;
+    for (i = 0; i < 12; i++) { //Como maximo son 12 pixeles de ancho, el buble pinta columna vertical por columna vertical
+            value1 = Arial12x12[offset + i * 2 + 1]; //Guarda los 8 píxeles de la mitad superior de la letra.
+            value2 = Arial12x12[offset + i * 2 + 2]; //Guarda los 4 píxeles restantes de la mitad inferior.
+			//Dividimos los dos valores porque son 12 bytes entonces como cada pagina tiene 8 bytes necesitamos llegar a las 
+			//dos paginas por eso dividimos el valor     
+            buffer[i + positionL1] = value1; //Pagina 0
+            buffer[i + 128 + positionL1] = value2; //Pagina 1
     }
     
 		positionL1 = positionL1 + char_width; 
@@ -299,15 +304,59 @@ void Escribe_L1 ( uint8_t * cadena )
 	// con cada uno de los caracteres
     positionL1 = 0;
     
-    // 2. Limpiar todo el tercio superior de la pantalla (Páginas 0 y 1)
+  //Limpiar
     for(int j = 0; j < 256; j++) {
         buffer[j] = 0x00;
     }
     
-    // 3. Recorrer la cadena de texto hasta llegar al final (\0)
     while (*cadena != '\0') {
         LCD_symbolToLocalBuffer_L1(*cadena);
         cadena++; // Avanza a la siguiente letra de la frase
+    }
+}
+
+void LCD_symbolToLocalBuffer_L2(uint8_t symbol) 
+{
+    uint8_t i, value1, value2;
+    uint16_t offset = 0;
+    uint8_t char_width = 0;
+    
+    offset = 25 * (symbol - ' ');
+    char_width = Arial12x12[offset]; 
+    
+    // Limpia
+    if (positionL2 + char_width > 128) {
+        positionL2 = 0; 
+        for(int j = 256; j < 512; j++) {
+            buffer[j] = 0x00;
+        }
+    }
+    
+    for (i = 0; i < 12; i++) {
+        if ((positionL2 + i) < 128) {
+            value1 = Arial12x12[offset + i * 2 + 1];
+            value2 = Arial12x12[offset + i * 2 + 2];
+            
+            buffer[i + 256 + positionL2] = value1; // Pagina 2
+            buffer[i + 384 + positionL2] = value2; // Pagina 3
+        }
+    }
+    
+    positionL2 = positionL2 + char_width; 
+}
+
+void Escribe_L2 ( uint8_t * cadena ) 
+{
+    positionL2 = 0;
+    
+    // Limpia
+    for(int j = 256; j < 512; j++) {
+        buffer[j] = 0x00;
+    }
+     
+    while (*cadena != '\0') {
+        LCD_symbolToLocalBuffer_L2(*cadena);
+        cadena++; 
     }
 }
 
